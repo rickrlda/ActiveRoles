@@ -1,0 +1,30 @@
+#
+# Force Azure attributes on user create
+#
+# When a user is being created and the edsaAzureUserPrincipalName attribute is found to be populated
+# (thus indicating that an Azure account is required):
+# 1) force the Azure UPN suffix to be @eletromilgames.com.br
+# 2) force the Azure usage location to be BR
+# Note this script is currently for create only.  If an administrator decides to set up an Azure account for an existing user, they must set the usag elocation and UPN correctly
+
+function onPreCreate($Request)
+{
+    if ( $Request.Class -ine 'user' ){return}
+    try{$edsaAzureUserPrincipalName = $Request.Get('edsaAzureUserPrincipalName')}catch{}
+    $EventLog.ReportEvent($Constants.EDS_EVENTLOG_WARNING_TYPE,"onPreCreate Request.Get edsaAzureUserPrincipalName = [$edsaAzureUserPrincipalName]") 
+
+    if ( ($edsaAzureUserPrincipalName -eq $null) -or ( $edsaAzureUserPrincipalName.length -le 0) ){return}
+    $split = $edsaAzureUserPrincipalName.split('@')
+    $edsaAzureUserPrincipalNameReplacement = $split[0] + '@eletromilgames.com.br'
+  
+    try{ $Request.Put('edsaAzureUserPrincipalName',$edsaAzureUserPrincipalNameReplacement) | out-null}catch{}
+    try{$edsaAzureUserPrincipalName = $Request.Get('edsaAzureUserPrincipalName')}catch{}
+    $EventLog.ReportEvent($Constants.EDS_EVENTLOG_WARNING_TYPE,"onPreCreate Request.Get edsaAzureUserPrincipalName after eplacement = [$edsaAzureUserPrincipalName]") 
+
+    try{$edsaAzureUserUsageLocation = $Request.Get('edsaAzureUserUsageLocation')}catch{}
+    $EventLog.ReportEvent($Constants.EDS_EVENTLOG_WARNING_TYPE,"onPreCreate Request.Get edsaAzureUserUsageLocation = [$edsaAzureUserUsageLocation]") 
+    if ( $edsaAzureUserUsageLocation -ne 'BR' )
+    {
+        try{ $Request.Put('edsaAzureUserUsageLocation','BR') | out-null}catch{}
+    }
+}
